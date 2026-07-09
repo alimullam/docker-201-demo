@@ -1,0 +1,16 @@
+services:
+  demo:
+    build: .
+    ports:
+      - "8000:8000"
+
+  # The hardened variant. Same app, hardened base.
+  # Run it with: docker compose --profile hardened up demo-hardened
+  demo-hardened:
+    build:
+      context: .
+      dockerfile: Dockerfile.hardened
+    ports:
+      - "8001:8000"
+    profiles:
+      - hardened

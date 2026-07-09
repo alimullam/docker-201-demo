@@ -1,0 +1,39 @@
+#syntax=docker/dockerfile:1
+
+# Docker 201 demo: the AFTER image.
+#
+# Same app, hardened foundation. DHI runtime images are minimal (no pip,
+# no package manager), so dependencies are installed in the -dev variant
+# and copied into the minimal runtime image.
+#
+# To change Python versions: update the two FROM lines below. Keep the
+# builder and runtime on the same version and the same libc family
+# (both alpine, or both debian).
+
+# === Build stage: install dependencies ===
+FROM dhidemo/dhi-python:3.14-alpine-dev AS builder
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+COPY app/requirements.txt .
+RUN pip install --no-cache-dir --target /app/deps -r requirements.txt
+
+# === Final stage: minimal hardened runtime ===
+FROM dhidemo/dhi-python:3.14-alpine
+
+WORKDIR /app
+
+ENV PYTHONUNBUFFERED=1
+# The runtime image's own python, pointed at the installed dependencies.
+ENV PYTHONPATH=/app/deps
+ENV APP_VARIANT=hardened
+
+COPY app/ .
+COPY --from=builder /app/deps /app/deps
+
+EXPOSE 8000
+
+ENTRYPOINT ["python", "-m", "gunicorn", "--bind", "0.0.0.0:8000", "app:app"]
